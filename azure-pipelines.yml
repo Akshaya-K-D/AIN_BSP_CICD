@@ -34,25 +34,10 @@ steps:
     ./build-yocto.sh
   displayName: "Build Yocto BSP"
 
-# Run QA Tests with pytest
+# Run QA Tests
 - script: |
     echo "=== Running QA Scripts ==="
-    pytest QA_Scriprts/ --junitxml=results.xml
+    cd QA_Scriprts   # check folder spelling!
+    python3 test_internet.py
+    python3 test_usb.py
   displayName: "Execute QA Tests"
-
-# Publish QA Test Results
-- task: PublishTestResults@2
-  inputs:
-    testResultsFiles: '**/results.xml'
-    testRunTitle: 'QA Test Results'
-
-# Publish Build Artifacts
-- task: PublishBuildArtifacts@1
-  inputs:
-    pathToPublish: 'Android/out'     # adjust to actual output
-    artifactName: 'Android_Build'
-
-- task: PublishBuildArtifacts@1
-  inputs:
-    pathToPublish: 'Yocto/out'       # adjust to actual output
-    artifactName: 'Yocto_Build'

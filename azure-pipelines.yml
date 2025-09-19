@@ -1,0 +1,72 @@
+trigger:
+  branches:
+    include:
+      - main
+      - master
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+stages:
+  - stage: Build_Android
+    displayName: "Build Android BSP"
+    jobs:
+      - job: BuildAndroid
+        steps:
+          - checkout: self
+          - script: |
+              echo "=== Listing Android directory ==="
+              ls Android
+              chmod +x Android/build.sh
+              ./Android/build.sh
+            displayName: "Run Android BSP Build"
+
+  - stage: Build_Yocto
+    displayName: "Build Yocto BSP"
+    dependsOn: Build_Android
+    jobs:
+      - job: BuildYocto
+        steps:
+          - checkout: self
+          - script: |
+              echo "=== Listing Yocto directory ==="
+              ls Yocto
+              chmod +x Yocto/build-yocto.sh
+              ./Yocto/build-yocto.sh
+            displayName: "Run Yocto BSP Build"
+
+  - stage: QA_Tests
+    displayName: "Run QA Tests"
+    dependsOn:
+      - Build_Android
+      - Build_Yocto
+    jobs:
+      - job: RunQATests
+        steps:
+          - checkout: self
+          - task: UsePythonVersion@0
+            inputs:
+              versionSpec: '3.x'
+          - script: |
+              echo "=== Running QA Scripts ==="
+              python3 QA_Scripts/test_internet.py
+              python3 QA_Scripts/test_usb.py
+            displayName: "Execute QA Tests"
+
+  - stage: Deploy
+    displayName: "Deploy Artifacts"
+    dependsOn: QA_Tests
+    condition: succeeded()
+    jobs:
+      - job: DeployArtifacts
+        steps:
+          - checkout: self
+          - script: |
+              echo "Collecting build outputs..."
+              mkdir -p artifacts/android artifacts/yocto
+              cp -r Android/* artifacts/android/ || true
+              cp -r Yocto/* artifacts/yocto/ || true
+            displayName: "Prepare Artifacts"
+          - publish: artifacts
+            artifact: BSP_Artifacts
+            displayName: "Publish BSP Artifacts"

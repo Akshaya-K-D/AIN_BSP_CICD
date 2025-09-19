@@ -6,7 +6,7 @@ pool:
 
 steps:
 # Step 1: Check out repo
-- task: Checkout@1
+- checkout: self
   displayName: "Checkout source code"
 
 # Step 2: Install dependencies (Yocto & Python)
@@ -37,7 +37,7 @@ steps:
 # Step 5: Run QA Tests
 - script: |
     echo "=== Running QA Scripts ==="
-    cd QA_Scriprts
+    cd QA_Scriprts   # <-- fix if folder is QA_Scripts
     python3 test_internet.py
     python3 test_usb.py
   displayName: "Execute QA Tests"

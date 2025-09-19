@@ -1,15 +1,15 @@
 trigger:
-- main   # run pipeline on push to main branch
+- main
 
 pool:
   vmImage: 'ubuntu-latest'
 
 steps:
-# Step 1: Check out repo
+# Checkout
 - checkout: self
   displayName: "Checkout source code"
 
-# Step 2: Install dependencies (Yocto & Python)
+# Install deps
 - script: |
     sudo apt-get update
     sudo apt-get install -y gawk wget git diffstat unzip texinfo \
@@ -18,7 +18,7 @@ steps:
     pip3 install pytest
   displayName: "Install Yocto & Python dependencies"
 
-# Step 3: Build Android BSP
+# Build Android
 - script: |
     echo "=== Building Android BSP ==="
     cd Android
@@ -26,7 +26,7 @@ steps:
     ./build.sh
   displayName: "Build Android BSP"
 
-# Step 4: Build Yocto BSP
+# Build Yocto
 - script: |
     echo "=== Building Yocto BSP ==="
     cd Yocto
@@ -34,10 +34,25 @@ steps:
     ./build-yocto.sh
   displayName: "Build Yocto BSP"
 
-# Step 5: Run QA Tests
+# Run QA Tests with pytest
 - script: |
     echo "=== Running QA Scripts ==="
-    cd QA_Scriprts   # <-- fix if folder is QA_Scripts
-    python3 test_internet.py
-    python3 test_usb.py
+    pytest QA_Scriprts/ --junitxml=results.xml
   displayName: "Execute QA Tests"
+
+# Publish QA Test Results
+- task: PublishTestResults@2
+  inputs:
+    testResultsFiles: '**/results.xml'
+    testRunTitle: 'QA Test Results'
+
+# Publish Build Artifacts
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathToPublish: 'Android/out'     # adjust to actual output
+    artifactName: 'Android_Build'
+
+- task: PublishBuildArtifacts@1
+  inputs:
+    pathToPublish: 'Yocto/out'       # adjust to actual output
+    artifactName: 'Yocto_Build'

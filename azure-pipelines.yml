@@ -1,45 +1,43 @@
 trigger:
-- main
+- main   # run pipeline on push to main branch
 
 pool:
   vmImage: 'ubuntu-latest'
 
-stages:
-- stage: Android_Build
+steps:
+# Step 1: Check out repo
+- task: Checkout@1
+  displayName: "Checkout source code"
+
+# Step 2: Install dependencies (Yocto & Python)
+- script: |
+    sudo apt-get update
+    sudo apt-get install -y gawk wget git diffstat unzip texinfo \
+      gcc-multilib build-essential chrpath socat cpio python3 python3-pip \
+      python3-pexpect xz-utils debianutils iputils-ping
+    pip3 install pytest
+  displayName: "Install Yocto & Python dependencies"
+
+# Step 3: Build Android BSP
+- script: |
+    echo "=== Building Android BSP ==="
+    cd Android
+    chmod +x build.sh
+    ./build.sh
   displayName: "Build Android BSP"
-  jobs:
-  - job: Build
-    steps:
-    - task: UsePythonVersion@0
-      inputs:
-        versionSpec: '3.x'
 
-    - checkout: self
+# Step 4: Build Yocto BSP
+- script: |
+    echo "=== Building Yocto BSP ==="
+    cd Yocto
+    chmod +x build-yocto.sh
+    ./build-yocto.sh
+  displayName: "Build Yocto BSP"
 
-    - script: |
-        echo "Starting Android BSP build..."
-        chmod +x build.sh
-        ./build.sh
-      displayName: "Run Android build.sh"
-
-- stage: QA_Tests
-  displayName: "Run QA Scripts"
-  dependsOn: Android_Build
-  jobs:
-  - job: Tests
-    steps:
-    - task: UsePythonVersion@0
-      inputs:
-        versionSpec: '3.x'
-
-    - checkout: self
-
-    - script: |
-        echo "Running internet test..."
-        python3 QA_Scriprts/test_internet.py
-      displayName: "Run Internet Test"
-
-    - script: |
-        echo "Running USB test..."
-        python3 QA_Scriprts/test_usb.py
-      displayName: "Run USB Test"
+# Step 5: Run QA Tests
+- script: |
+    echo "=== Running QA Scripts ==="
+    cd QA_Scriprts
+    python3 test_internet.py
+    python3 test_usb.py
+  displayName: "Execute QA Tests"
